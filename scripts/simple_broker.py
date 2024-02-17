@@ -8,15 +8,50 @@ from sts_msgs.msg import Float32
 
 def callback(data):
     rospy.loginfo("Received actuators message: %s", data)
+    float_array_to_send = []
+    float_array_to_send.append(data.arm_base_servo.enable)
+    float_array_to_send.append(data.arm_base_servo.speed)
+    float_array_to_send.append(data.arm_base_servo.angle)
     
+    float_array_to_send.append(data.arm_mid_servo.enable)
+    float_array_to_send.append(data.arm_mid_servo.speed)
+    float_array_to_send.append(data.arm_mid_servo.angle)
+    
+    float_array_to_send.append(data.arm_suction_cup_servo.enable)
+    float_array_to_send.append(data.arm_suction_cup_servo.speed)
+    float_array_to_send.append(data.arm_suction_cup_servo.angle)
+    
+    float_array_to_send.append(data.pusher_servo.enable)
+    float_array_to_send.append(data.pusher_servo.speed)
+    float_array_to_send.append(data.pusher_servo.angle)
+    
+    float_array_to_send.append(data.additionnal_servo_1.enable)
+    float_array_to_send.append(data.additionnal_servo_1.speed)
+    float_array_to_send.append(data.additionnal_servo_1.angle)
+    
+    float_array_to_send.append(data.additionnal_servo_2.enable)
+    float_array_to_send.append(data.additionnal_servo_2.speed)
+    float_array_to_send.append(data.additionnal_servo_2.angle)
+    
+    float_array_to_send.append(data.arm_vacuum.enable_pump)
+    float_array_to_send.append(data.arm_vacuum.release)
+    float_array_to_send.append(data.fake_statuette_vacuum.enable_pump)
+    float_array_to_send.append(data.score)
 
-def write_float_to_serial(float_value):
+    write_float_to_serial(float_array_to_send)
+
+def float_to_hex(float_value):
     # Convert float to hexadecimal representation
     float_bytes = struct.pack('f', float_value)
     float_hex = ''.join(format(x, '02x') for x in float_bytes)
+    return float_hex
     
-    # Send hexadecimal value over serial
-    ser.write(f"Hex value: {float_hex}\n".encode())
+
+def write_float_to_serial(float_values):
+    # Convert list of float values to hexadecimal representation and concatenate them
+    hex_values = ''.join([struct.pack('f', float_value).hex() for float_value in float_values])
+    # Send concatenated hexadecimal values over serial
+    ser.write(f"Hex values{hex_values}\n".encode())
 
 def sample_node():
 
