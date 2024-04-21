@@ -9,6 +9,7 @@ from krabi_msgs.msg import Encoders, MotorsCmd, MotorsParameters, OdomLighter
 from std_msgs.msg import Bool
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
+from time import sleep
 
 class SimpleBrokerSTM32(Node):
     def __init__(self):
@@ -30,7 +31,7 @@ class SimpleBrokerSTM32(Node):
             10)
         self.subscription = self.create_subscription(
             Bool,
-            'enable_motors',
+            'enable_motor',
             self.callback_enable_motors,
             10)
         self.odom_pub = self.create_publisher(OdomLighter, 'odom_lighter', 10)
@@ -79,6 +80,9 @@ class SimpleBrokerSTM32(Node):
         
 
     def write_float_to_serial(self, channel_name, float_values):
+        # Pad to 10 values
+        float_values = float_values + [0]*(10-len(float_values))
+
         # Convert list of float values to hexadecimal representation and concatenate them
         # [2:] to remove "0x"
         # zfill(8) so each float takes up 8 char
@@ -92,6 +96,7 @@ class SimpleBrokerSTM32(Node):
         self.get_logger().debug(f"Sending: {channel_name}{hex_values}\n".encode())
         print(f"Sending: {channel_name}{hex_values}\n".encode())
         sys.stdout.flush()
+        sleep(0.001)
 
     def get_float(self, a_string, a_beginning):
         hex_value = a_string[a_beginning:a_beginning + 8]  # Extract hexadecimal value
