@@ -6,6 +6,7 @@ import rclpy
 from rclpy.node import Node
 from krabi_msgs.msg import Actuators
 from std_msgs.msg import Float32
+from time import sleep
 
 class SimpleBrokerArduino(Node):
     def __init__(self):
@@ -16,36 +17,36 @@ class SimpleBrokerArduino(Node):
             self.callback,
             10)
         self.vacuum_pub = self.create_publisher(Float32, 'vacuum', 10)
-        self.timer = self.create_timer(0.1, self.read_serial)
-        self.ser = serial.Serial('/dev/ttyUSB0', 57600, timeout=0.1)
+        self.init_serial()
+        self.init_timer()
 
     def callback(self, msg):
         float_array_to_send = []
         float_array_to_send.append(msg.arm_base_servo.enable)
-        
+
         float_array_to_send.append(msg.arm_base_servo.speed)
         float_array_to_send.append(msg.arm_base_servo.angle)
-        
+
         float_array_to_send.append(msg.arm_mid_servo.enable)
         float_array_to_send.append(msg.arm_mid_servo.speed)
         float_array_to_send.append(msg.arm_mid_servo.angle)
-        
+
         float_array_to_send.append(msg.arm_suction_cup_servo.enable)
         float_array_to_send.append(msg.arm_suction_cup_servo.speed)
         float_array_to_send.append(msg.arm_suction_cup_servo.angle)
-        
+
         float_array_to_send.append(msg.pusher_servo.enable)
         float_array_to_send.append(msg.pusher_servo.speed)
         float_array_to_send.append(msg.pusher_servo.angle)
-        
+
         float_array_to_send.append(msg.additionnal_servo_1.enable)
         float_array_to_send.append(msg.additionnal_servo_1.speed)
         float_array_to_send.append(msg.additionnal_servo_1.angle)
-        
+
         float_array_to_send.append(msg.additionnal_servo_2.enable)
         float_array_to_send.append(msg.additionnal_servo_2.speed)
         float_array_to_send.append(msg.additionnal_servo_2.angle)
-        
+
         float_array_to_send.append(msg.arm_vacuum.enable_pump)
         float_array_to_send.append(msg.arm_vacuum.release)
         float_array_to_send.append(msg.fake_statuette_vacuum.enable_pump)
@@ -60,7 +61,7 @@ class SimpleBrokerArduino(Node):
         float_bytes = struct.pack('f', float_value)
         float_hex = ''.join(format(x, '02x') for x in float_bytes)
         return float_hex
-        
+
 
     def write_float_to_serial(self, float_values):
         # Convert list of float values to hexadecimal representation and concatenate them
@@ -73,8 +74,27 @@ class SimpleBrokerArduino(Node):
         #print(f"sending:{hex_values}\n".encode())
         #self.get_logger().debug(f"Sending: {hex_values}\n".encode())
 
+    def init_serial(self):
+        self.ser = serial.Serial('/dev/ttyUSB0', 57600, timeout=3)
+        sleep(2)
+
+    def init_timer(self):
+        self.timer = self.create_timer(0.1, self.read_serial)
+
     def read_serial(self):
-        line = self.ser.readline().decode().strip()
+        line = self.ser.readline().decode()
+
+        print(line)
+        if len(line) == 0 or line[-1] != "\n":
+            self.timer.cancel()
+            # Error!
+            print("Arduino Serial error!")
+            self.get_logger().warn("Arduino Serial error!")
+
+            self.ser.close()
+            self.init_serial()
+
+        line = line.strip()
         self.get_logger().debug(f"Line: {line}")
         if line.startswith("From Arduino:"):
             vacuum_msg = Float32()
@@ -82,7 +102,7 @@ class SimpleBrokerArduino(Node):
             float_hex = int(hex_value, 16)
             vacuum_msg.data = struct.unpack('f', struct.pack('I', float_hex))[0]
             self.get_logger().debug(f"Received Float Value: {vacuum_msg.data}")
-            
+
             self.vacuum_pub.publish(vacuum_msg)
 
 def main(args=None):
